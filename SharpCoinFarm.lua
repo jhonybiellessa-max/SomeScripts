@@ -12,9 +12,6 @@ local debrisFolder = workspace:WaitForChild("DebrisClient")
 local farming = false
 local running = true
 
--- Tabela para armazenar pickups que estão sendo processadas
-local activePickups = {}
-
 -- Configurações da GUI
 local GUI_SETTINGS = {
     MAIN_FRAME_SIZE = UDim2.new(0, 250, 0, 200),
@@ -117,17 +114,26 @@ local destroyButton = createButton(frame, "Destroy Script", UDim2.new(0, 10, 0, 
 local openButton = createButton(gui, "Abrir Farm UI", GUI_SETTINGS.OPEN_BUTTON_POSITION, GUI_SETTINGS.OPEN_BUTTON_COLOR, GUI_SETTINGS.OPEN_BUTTON_SIZE)
 openButton.Visible = false
 
--- Função para puxar pickup (agora com teletransporte direto e persistente)
-local function bringPickup(model)
+-- Função para mover o personagem até a pickup
+local function moveToPickup(model)
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local root = character.HumanoidRootPart
+    local rootPart = character.HumanoidRootPart
 
-    local partToTween = model.PrimaryPart or model:FindFirstChild("Root")
-    if not partToTween or not partToTween:IsA("BasePart") then return end
+    local pickupPart = model.PrimaryPart or model:FindFirstChild("Root")
+    if not pickupPart or not pickupPart:IsA("BasePart") then return end
 
-    -- Teleporta a parte diretamente para a posição do jogador
-    -- Isso será feito repetidamente no loop principal para garantir a coleta
-    partToTween.CFrame = root.CFrame
+    -- Calcula a posição para o personagem ir (um pouco acima da pickup para coletar)
+    local targetPosition = pickupPart.CFrame * CFrame.new(0, 2, 0) -- Ajuste a altura conforme necessário
+
+    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out) -- Duração e estilo do tween
+    local tween = TweenService:Create(
+        rootPart,
+        tweenInfo,
+        {CFrame = targetPosition}
+    )
+
+    tween:Play()
+    tween.Completed:Wait() -- Espera o tween terminar antes de continuar
 end
 
 -- Loop Farm
@@ -136,20 +142,12 @@ local function startFarmLoop()
     if farmLoopConnection then return end -- Já está rodando
     farmLoopConnection = RunService.Heartbeat:Connect(function()
         if farming then
-            -- Adiciona novos pickups à lista de ativos
             for _, obj in pairs(debrisFolder:GetChildren()) do
-                if obj:IsA("Model") and string.find(obj.Name, "Pickup") and not activePickups[obj] then
-                    activePickups[obj] = true
-                end
-            end
-
-            -- Processa pickups ativos
-            for obj, _ in pairs(activePickups) do
-                if obj.Parent == debrisFolder then -- Verifica se o pickup ainda existe na pasta
-                    bringPickup(obj)
-                else
-                    -- Pickup foi coletado ou destruído, remove da lista de ativos
-                    activePickups[obj] = nil
+                if obj:IsA("Model") and string.find(obj.Name, "Pickup") then
+                    -- Move o personagem para a pickup
+                    moveToPickup(obj)
+                    task.wait(0.1) -- Pequeno delay para evitar spam de movimento e dar tempo para coleta
+                    break -- Processa uma pickup por vez para evitar movimentos caóticos
                 end
             end
         end
@@ -160,7 +158,6 @@ local function stopFarmLoop()
     if farmLoopConnection then
         farmLoopConnection:Disconnect()
         farmLoopConnection = nil
-        activePickups = {} -- Limpa a lista de pickups ativos
     end
 end
 
