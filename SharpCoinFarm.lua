@@ -1,6 +1,9 @@
+--!strict
+
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -9,181 +12,220 @@ local debrisFolder = workspace:WaitForChild("DebrisClient")
 local farming = false
 local running = true
 
+-- Configurações da GUI
+local GUI_SETTINGS = {
+    MAIN_FRAME_SIZE = UDim2.new(0, 250, 0, 200),
+    MAIN_FRAME_POSITION = UDim2.new(0.5, -125, 0.5, -100), -- Centralizado
+    MAIN_FRAME_COLOR = Color3.fromRGB(40, 40, 40),
+    BUTTON_SIZE = UDim2.new(1, -20, 0, 45),
+    BUTTON_OFFSET_Y = 55,
+    BUTTON_TEXT_COLOR = Color3.new(1, 1, 1),
+    TOGGLE_ON_COLOR = Color3.fromRGB(0, 170, 0),
+    TOGGLE_OFF_COLOR = Color3.fromRGB(170, 0, 0),
+    HIDE_BUTTON_COLOR = Color3.fromRGB(70, 70, 70),
+    DESTROY_BUTTON_COLOR = Color3.fromRGB(170, 0, 0),
+    CORNER_RADIUS = UDim.new(0, 8), -- Cantos arredondados
+    OPEN_BUTTON_SIZE = UDim2.new(0, 150, 0, 40),
+    OPEN_BUTTON_POSITION = UDim2.new(1, -160, 0, 10), -- Canto superior direito
+    OPEN_BUTTON_COLOR = Color3.fromRGB(50, 50, 50),
+}
+
+-- Função para criar botões padronizados
+local function createButton(parent, text, position, backgroundColor, size)
+    local button = Instance.new("TextButton")
+    button.Size = size or GUI_SETTINGS.BUTTON_SIZE
+    button.Position = position
+    button.Text = text
+    button.BackgroundColor3 = backgroundColor
+    button.TextColor3 = GUI_SETTINGS.BUTTON_TEXT_COLOR
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 18
+    button.Parent = parent
+
+    Instance.new("UICorner", button).CornerRadius = GUI_SETTINGS.CORNER_RADIUS
+    Instance.new("UIPadding", button).PaddingBottom = UDim.new(0, 5)
+    Instance.new("UIPadding", button).PaddingTop = UDim.new(0, 5)
+    Instance.new("UIPadding", button).PaddingLeft = UDim.new(0, 10)
+    Instance.new("UIPadding", button).PaddingRight = UDim.new(0, 10)
+
+    return button
+end
+
 -- GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "PickupFarmUI"
-gui.Parent = CoreGui
+gui.Name = "PickupFarmUI_Improved"
 gui.ResetOnSpawn = false
+gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui") -- Melhor prática para GUIs de jogador
 
 -- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,240,0,180)
-frame.Position = UDim2.new(0.4,0,0.4,0)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.BorderSizePixel = 0
+frame.Size = GUI_SETTINGS.MAIN_FRAME_SIZE
+frame.Position = GUI_SETTINGS.MAIN_FRAME_POSITION
+frame.BackgroundColor3 = GUI_SETTINGS.MAIN_FRAME_COLOR
+frame.BorderColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 2
 frame.Parent = gui
 
-Instance.new("UICorner",frame).CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", frame).CornerRadius = GUI_SETTINGS.CORNER_RADIUS
 
--- Barra de título
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1,0,0,30)
-titleBar.BackgroundColor3 = Color3.fromRGB(35,35,35)
-titleBar.BorderSizePixel = 0
-titleBar.Parent = frame
+-- Adiciona um título ao frame
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+titleLabel.TextColor3 = Color3.new(1, 1, 1)
+titleLabel.Text = "Pickup Farm"
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 20
+titleLabel.Parent = frame
 
-Instance.new("UICorner",titleBar).CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", titleLabel).CornerRadius = GUI_SETTINGS.CORNER_RADIUS
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,0,1,0)
-title.BackgroundTransparency = 1
-title.Text = "Pickup Farm"
-title.TextColor3 = Color3.new(1,1,1)
-title.TextSize = 16
-title.Font = Enum.Font.GothamBold
-title.Parent = titleBar
-
--- Drag apenas na barra
+-- Drag Detector para o frame
 local drag = Instance.new("UIDragDetector")
-drag.Parent = titleBar
+drag.Parent = frame
 
--- Container botões
-local container = Instance.new("Frame")
-container.Size = UDim2.new(1,-20,1,-40)
-container.Position = UDim2.new(0,10,0,35)
-container.BackgroundTransparency = 1
-container.Parent = frame
+-- Layout para os botões
+local listLayout = Instance.new("UIListLayout")
+listLayout.FillDirection = Enum.FillDirection.Vertical
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+listLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+listLayout.Padding = UDim.new(0, 10)
+listLayout.Parent = frame
 
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0,8)
-layout.Parent = container
+-- Adiciona um padding para o conteúdo do frame
+local framePadding = Instance.new("UIPadding")
+framePadding.PaddingTop = UDim.new(0, 40) -- Espaço para o título
+framePadding.PaddingBottom = UDim.new(0, 10)
+framePadding.PaddingLeft = UDim.new(0, 10)
+framePadding.PaddingRight = UDim.new(0, 10)
+framePadding.Parent = frame
 
--- Botão farm
-local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(1,0,0,40)
-toggle.Text = "Farm OFF"
-toggle.Font = Enum.Font.GothamBold
-toggle.TextSize = 14
-toggle.BackgroundColor3 = Color3.fromRGB(170,50,50)
-toggle.TextColor3 = Color3.new(1,1,1)
-toggle.Parent = container
-Instance.new("UICorner",toggle)
+-- Toggle Farm
+local toggleButton = createButton(frame, "Farm: OFF", UDim2.new(0, 10, 0, 40), GUI_SETTINGS.TOGGLE_OFF_COLOR)
 
--- Botão ocultar
-local hide = Instance.new("TextButton")
-hide.Size = UDim2.new(1,0,0,40)
-hide.Text = "Ocultar UI"
-hide.Font = Enum.Font.GothamBold
-hide.TextSize = 14
-hide.BackgroundColor3 = Color3.fromRGB(60,60,60)
-hide.TextColor3 = Color3.new(1,1,1)
-hide.Parent = container
-Instance.new("UICorner",hide)
+-- Ocultar UI
+local hideButton = createButton(frame, "Ocultar UI", UDim2.new(0, 10, 0, 40 + GUI_SETTINGS.BUTTON_OFFSET_Y), GUI_SETTINGS.HIDE_BUTTON_COLOR)
 
--- Botão destruir
-local destroy = Instance.new("TextButton")
-destroy.Size = UDim2.new(1,0,0,40)
-destroy.Text = "Destroy Script"
-destroy.Font = Enum.Font.GothamBold
-destroy.TextSize = 14
-destroy.BackgroundColor3 = Color3.fromRGB(200,60,60)
-destroy.TextColor3 = Color3.new(1,1,1)
-destroy.Parent = container
-Instance.new("UICorner",destroy)
+-- Botão Destroy
+local destroyButton = createButton(frame, "Destroy Script", UDim2.new(0, 10, 0, 40 + (GUI_SETTINGS.BUTTON_OFFSET_Y * 2)), GUI_SETTINGS.DESTROY_BUTTON_COLOR)
 
--- Botão abrir UI
-local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.new(0,120,0,35)
-openButton.Position = UDim2.new(0,10,0,10)
-openButton.Text = "Abrir Farm UI"
-openButton.BackgroundColor3 = Color3.fromRGB(40,40,40)
-openButton.TextColor3 = Color3.new(1,1,1)
+-- Botão abrir UI (pequeno e no canto)
+local openButton = createButton(gui, "Abrir Farm UI", GUI_SETTINGS.OPEN_BUTTON_POSITION, GUI_SETTINGS.OPEN_BUTTON_COLOR, GUI_SETTINGS.OPEN_BUTTON_SIZE)
 openButton.Visible = false
-openButton.Parent = gui
-Instance.new("UICorner",openButton)
 
--- Função puxar pickup
+-- Função para puxar pickup
 local function bringPickup(model)
-
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local root = character.HumanoidRootPart
 
     local part = model:FindFirstChildWhichIsA("BasePart")
     if not part then return end
 
-    part.CanCollide = false
-
     local tween = TweenService:Create(
         part,
-        TweenInfo.new(0.15,Enum.EasingStyle.Linear),
+        TweenInfo.new(0.25, Enum.EasingStyle.Linear),
         {CFrame = root.CFrame}
     )
 
     tween:Play()
-
 end
 
--- Loop farm
-task.spawn(function()
-
-    while running do
-        
+-- Loop Farm
+local farmLoopConnection
+local function startFarmLoop()
+    if farmLoopConnection then return end -- Já está rodando
+    farmLoopConnection = RunService.Heartbeat:Connect(function()
         if farming then
-            
-            for _,obj in pairs(debrisFolder:GetChildren()) do
-                
-                if obj:IsA("Model") and string.find(obj.Name,"Pickup") then
+            for _, obj in pairs(debrisFolder:GetChildren()) do
+                if obj:IsA("Model") and string.find(obj.Name, "Pickup") then
                     bringPickup(obj)
                 end
-                
             end
-            
         end
-        
-        task.wait(0.1)
-        
+    end)
+end
+
+local function stopFarmLoop()
+    if farmLoopConnection then
+        farmLoopConnection:Disconnect()
+        farmLoopConnection = nil
     end
+end
 
-end)
-
--- Toggle farm
-toggle.MouseButton1Click:Connect(function()
-
+-- Eventos da GUI
+toggleButton.MouseButton1Click:Connect(function()
     farming = not farming
 
     if farming then
-        toggle.Text = "Farm ON"
-        toggle.BackgroundColor3 = Color3.fromRGB(60,170,60)
+        toggleButton.Text = "Farm: ON"
+        toggleButton.BackgroundColor3 = GUI_SETTINGS.TOGGLE_ON_COLOR
+        startFarmLoop()
     else
-        toggle.Text = "Farm OFF"
-        toggle.BackgroundColor3 = Color3.fromRGB(170,50,50)
+        toggleButton.Text = "Farm: OFF"
+        toggleButton.BackgroundColor3 = GUI_SETTINGS.TOGGLE_OFF_COLOR
+        stopFarmLoop()
     end
-
 end)
 
--- Ocultar
-hide.MouseButton1Click:Connect(function()
+hideButton.MouseButton1Click:Connect(function()
     frame.Visible = false
     openButton.Visible = true
 end)
 
--- Mostrar
 openButton.MouseButton1Click:Connect(function()
     frame.Visible = true
     openButton.Visible = false
 end)
 
--- Destroy
-destroy.MouseButton1Click:Connect(function()
-
+destroyButton.MouseButton1Click:Connect(function()
     farming = false
-    running = false
-    
+    running = false -- Para o loop principal, se houver outros
+    stopFarmLoop()
     gui:Destroy()
-
 end)
 
 -- Atualizar personagem
 player.CharacterAdded:Connect(function(char)
     character = char
 end)
+
+-- Iniciar o loop de farm se já estiver ativo (caso o script seja injetado com farming = true)
+if farming then
+    startFarmLoop()
+end
+
+-- Centralizar o frame quando a tela for redimensionada (opcional, mas bom para responsividade)
+local function centerFrame()
+    frame.Position = UDim2.new(0.5, -frame.AbsoluteSize.X / 2, 0.5, -frame.AbsoluteSize.Y / 2)
+end
+
+frame.Changed:Connect(function(property)
+    if property == "AbsoluteSize" then
+        centerFrame()
+    end
+end)
+
+centerFrame() -- Centraliza inicialmente
+
+-- Adiciona um efeito de hover aos botões
+local function setupHoverEffect(button, originalColor, hoverColor)
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = hoverColor
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = originalColor
+    end)
+end
+
+setupHoverEffect(toggleButton, GUI_SETTINGS.TOGGLE_OFF_COLOR, Color3.fromRGB(200, 0, 0)) -- Cor inicial será ajustada pelo estado
+setupHoverEffect(hideButton, GUI_SETTINGS.HIDE_BUTTON_COLOR, Color3.fromRGB(100, 100, 100))
+setupHoverEffect(destroyButton, GUI_SETTINGS.DESTROY_BUTTON_COLOR, Color3.fromRGB(200, 0, 0))
+setupHoverEffect(openButton, GUI_SETTINGS.OPEN_BUTTON_COLOR, Color3.fromRGB(80, 80, 80))
+
+-- Ajusta a cor inicial do toggleButton
+if farming then
+    toggleButton.BackgroundColor3 = GUI_SETTINGS.TOGGLE_ON_COLOR
+else
+    toggleButton.BackgroundColor3 = GUI_SETTINGS.TOGGLE_OFF_COLOR
+end
