@@ -12,69 +12,110 @@ local running = true
 -- GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "PickupFarmUI"
-gui.ResetOnSpawn = false
 gui.Parent = CoreGui
+gui.ResetOnSpawn = false
 
 -- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,220,0,160)
+frame.Size = UDim2.new(0,240,0,180)
 frame.Position = UDim2.new(0.4,0,0.4,0)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BorderSizePixel = 0
 frame.Parent = gui
 
-Instance.new("UICorner", frame)
+Instance.new("UICorner",frame).CornerRadius = UDim.new(0,8)
 
+-- Barra de título
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1,0,0,30)
+titleBar.BackgroundColor3 = Color3.fromRGB(35,35,35)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = frame
+
+Instance.new("UICorner",titleBar).CornerRadius = UDim.new(0,8)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,1,0)
+title.BackgroundTransparency = 1
+title.Text = "Pickup Farm"
+title.TextColor3 = Color3.new(1,1,1)
+title.TextSize = 16
+title.Font = Enum.Font.GothamBold
+title.Parent = titleBar
+
+-- Drag apenas na barra
 local drag = Instance.new("UIDragDetector")
-drag.Parent = frame
+drag.Parent = titleBar
 
--- Toggle Farm
+-- Container botões
+local container = Instance.new("Frame")
+container.Size = UDim2.new(1,-20,1,-40)
+container.Position = UDim2.new(0,10,0,35)
+container.BackgroundTransparency = 1
+container.Parent = frame
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0,8)
+layout.Parent = container
+
+-- Botão farm
 local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(1,-20,0,40)
-toggle.Position = UDim2.new(0,10,0,10)
-toggle.Text = "Farm: OFF"
-toggle.BackgroundColor3 = Color3.fromRGB(150,0,0)
+toggle.Size = UDim2.new(1,0,0,40)
+toggle.Text = "Farm OFF"
+toggle.Font = Enum.Font.GothamBold
+toggle.TextSize = 14
+toggle.BackgroundColor3 = Color3.fromRGB(170,50,50)
 toggle.TextColor3 = Color3.new(1,1,1)
-toggle.Parent = frame
+toggle.Parent = container
+Instance.new("UICorner",toggle)
 
--- Ocultar UI
+-- Botão ocultar
 local hide = Instance.new("TextButton")
-hide.Size = UDim2.new(1,-20,0,40)
-hide.Position = UDim2.new(0,10,0,60)
+hide.Size = UDim2.new(1,0,0,40)
 hide.Text = "Ocultar UI"
-hide.BackgroundColor3 = Color3.fromRGB(70,70,70)
+hide.Font = Enum.Font.GothamBold
+hide.TextSize = 14
+hide.BackgroundColor3 = Color3.fromRGB(60,60,60)
 hide.TextColor3 = Color3.new(1,1,1)
-hide.Parent = frame
+hide.Parent = container
+Instance.new("UICorner",hide)
 
--- Botão Destroy
+-- Botão destruir
 local destroy = Instance.new("TextButton")
-destroy.Size = UDim2.new(1,-20,0,40)
-destroy.Position = UDim2.new(0,10,0,110)
+destroy.Size = UDim2.new(1,0,0,40)
 destroy.Text = "Destroy Script"
-destroy.BackgroundColor3 = Color3.fromRGB(170,0,0)
+destroy.Font = Enum.Font.GothamBold
+destroy.TextSize = 14
+destroy.BackgroundColor3 = Color3.fromRGB(200,60,60)
 destroy.TextColor3 = Color3.new(1,1,1)
-destroy.Parent = frame
+destroy.Parent = container
+Instance.new("UICorner",destroy)
 
 -- Botão abrir UI
 local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.new(0,120,0,40)
+openButton.Size = UDim2.new(0,120,0,35)
 openButton.Position = UDim2.new(0,10,0,10)
 openButton.Text = "Abrir Farm UI"
+openButton.BackgroundColor3 = Color3.fromRGB(40,40,40)
+openButton.TextColor3 = Color3.new(1,1,1)
 openButton.Visible = false
 openButton.Parent = gui
+Instance.new("UICorner",openButton)
 
 -- Função puxar pickup
 local function bringPickup(model)
 
-    if not character then return end
     local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
     local part = model:FindFirstChildWhichIsA("BasePart")
     if not part then return end
 
+    part.CanCollide = false
+
     local tween = TweenService:Create(
         part,
-        TweenInfo.new(0.25, Enum.EasingStyle.Linear),
+        TweenInfo.new(0.15,Enum.EasingStyle.Linear),
         {CFrame = root.CFrame}
     )
 
@@ -82,7 +123,7 @@ local function bringPickup(model)
 
 end
 
--- Loop Farm
+-- Loop farm
 task.spawn(function()
 
     while running do
@@ -99,40 +140,40 @@ task.spawn(function()
             
         end
         
-        task.wait(0.2)
+        task.wait(0.1)
         
     end
 
 end)
 
--- Toggle Farm
+-- Toggle farm
 toggle.MouseButton1Click:Connect(function()
 
     farming = not farming
 
     if farming then
-        toggle.Text = "Farm: ON"
-        toggle.BackgroundColor3 = Color3.fromRGB(0,170,0)
+        toggle.Text = "Farm ON"
+        toggle.BackgroundColor3 = Color3.fromRGB(60,170,60)
     else
-        toggle.Text = "Farm: OFF"
-        toggle.BackgroundColor3 = Color3.fromRGB(150,0,0)
+        toggle.Text = "Farm OFF"
+        toggle.BackgroundColor3 = Color3.fromRGB(170,50,50)
     end
 
 end)
 
--- Ocultar UI
+-- Ocultar
 hide.MouseButton1Click:Connect(function()
     frame.Visible = false
     openButton.Visible = true
 end)
 
--- Mostrar UI
+-- Mostrar
 openButton.MouseButton1Click:Connect(function()
     frame.Visible = true
     openButton.Visible = false
 end)
 
--- Destroy Script
+-- Destroy
 destroy.MouseButton1Click:Connect(function()
 
     farming = false
