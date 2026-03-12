@@ -119,11 +119,12 @@ local function bringPickup(model)
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     local root = character.HumanoidRootPart
 
-    local part = model:FindFirstChildWhichIsA("BasePart")
-    if not part then return end
+    -- Tenta encontrar a PrimaryPart ou a parte chamada "Root"
+    local partToTween = model.PrimaryPart or model:FindFirstChild("Root")
+    if not partToTween or not partToTween:IsA("BasePart") then return end
 
     local tween = TweenService:Create(
-        part,
+        partToTween,
         TweenInfo.new(0.25, Enum.EasingStyle.Linear),
         {CFrame = root.CFrame}
     )
