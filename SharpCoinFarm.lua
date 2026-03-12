@@ -12,6 +12,9 @@ local debrisFolder = workspace:WaitForChild("DebrisClient")
 local farming = false
 local running = true
 
+-- Tabela para armazenar pickups que estão sendo processadas
+local activePickups = {}
+
 -- Configurações da GUI
 local GUI_SETTINGS = {
     MAIN_FRAME_SIZE = UDim2.new(0, 250, 0, 200),
@@ -114,22 +117,17 @@ local destroyButton = createButton(frame, "Destroy Script", UDim2.new(0, 10, 0, 
 local openButton = createButton(gui, "Abrir Farm UI", GUI_SETTINGS.OPEN_BUTTON_POSITION, GUI_SETTINGS.OPEN_BUTTON_COLOR, GUI_SETTINGS.OPEN_BUTTON_SIZE)
 openButton.Visible = false
 
--- Função para puxar pickup
+-- Função para puxar pickup (agora com teletransporte direto e persistente)
 local function bringPickup(model)
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
     local root = character.HumanoidRootPart
 
-    -- Tenta encontrar a PrimaryPart ou a parte chamada "Root"
     local partToTween = model.PrimaryPart or model:FindFirstChild("Root")
     if not partToTween or not partToTween:IsA("BasePart") then return end
 
-    local tween = TweenService:Create(
-        partToTween,
-        TweenInfo.new(0.25, Enum.EasingStyle.Linear),
-        {CFrame = root.CFrame}
-    )
-
-    tween:Play()
+    -- Teleporta a parte diretamente para a posição do jogador
+    -- Isso será feito repetidamente no loop principal para garantir a coleta
+    partToTween.CFrame = root.CFrame
 end
 
 -- Loop Farm
@@ -138,9 +136,20 @@ local function startFarmLoop()
     if farmLoopConnection then return end -- Já está rodando
     farmLoopConnection = RunService.Heartbeat:Connect(function()
         if farming then
+            -- Adiciona novos pickups à lista de ativos
             for _, obj in pairs(debrisFolder:GetChildren()) do
-                if obj:IsA("Model") and string.find(obj.Name, "Pickup") then
+                if obj:IsA("Model") and string.find(obj.Name, "Pickup") and not activePickups[obj] then
+                    activePickups[obj] = true
+                end
+            end
+
+            -- Processa pickups ativos
+            for obj, _ in pairs(activePickups) do
+                if obj.Parent == debrisFolder then -- Verifica se o pickup ainda existe na pasta
                     bringPickup(obj)
+                else
+                    -- Pickup foi coletado ou destruído, remove da lista de ativos
+                    activePickups[obj] = nil
                 end
             end
         end
@@ -151,6 +160,7 @@ local function stopFarmLoop()
     if farmLoopConnection then
         farmLoopConnection:Disconnect()
         farmLoopConnection = nil
+        activePickups = {} -- Limpa a lista de pickups ativos
     end
 end
 
