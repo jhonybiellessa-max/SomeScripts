@@ -15,7 +15,7 @@ local isMinimized = false
 
 -- Criar ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "FarmGui_Manus_v2"
+screenGui.Name = "FarmGui_JG_v2"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
@@ -38,7 +38,7 @@ uiCorner.Parent = mainFrame
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 30)
 titleLabel.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-titleLabel.Text = " Manus Farm UI v2 "
+titleLabel.Text = " JG Farm UI v2 "
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 14
