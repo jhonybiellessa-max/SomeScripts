@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 
 -- Espera pelos RemoteEvents
 local SharedCore = ReplicatedStorage:WaitForChild("SharedCore")
@@ -207,21 +208,27 @@ AutoTrainButton.MouseButton1Click:Connect(function()
         AutoTrainButton.Text = "Auto-Train: ON"
         AutoTrainButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0) -- Verde
         while autoTrainEnabled do
-            pcall(function()
-                local equipmentObject
+            local equipmentObject
+            local success, err = pcall(function()
                 if currentTrainType == "Body" then
-                    equipmentObject = workspace:WaitForChild("Map", 10):WaitForChild("Equipment", 10):WaitForChild("BenchPress", 10):WaitForChild("BenchPress", 10)
+                    equipmentObject = workspace:WaitForChild("Map", 1):WaitForChild("Equipment", 1):WaitForChild("BenchPress", 1):WaitForChild("BenchPress", 1)
                 elseif currentTrainType == "Arms" then
-                    equipmentObject = workspace:WaitForChild("Map", 10):WaitForChild("Equipment", 10):WaitForChild("Curls", 10):WaitForChild("Curls", 10)
+                    equipmentObject = workspace:WaitForChild("Map", 1):WaitForChild("Equipment", 1):WaitForChild("Curls", 1):WaitForChild("Curls", 1)
                 elseif currentTrainType == "Legs" then
-                    equipmentObject = workspace:WaitForChild("Map", 10):WaitForChild("Equipment", 10):WaitForChild("Squat", 10):WaitForChild("Squat", 10)
+                    equipmentObject = workspace:WaitForChild("Map", 1):WaitForChild("Equipment", 1):WaitForChild("Squat", 1):WaitForChild("Squat", 1)
                 end
+            end)
 
-                if equipmentObject then
-                    WorkoutRepEvent:FireServer(equipmentObject)
-                else
-                    warn("Equipment object not found for " .. currentTrainType .. ". Is the player in the correct training area?")
-                end
+            if not success or not equipmentObject then
+                warn("Equipment object not found for " .. currentTrainType .. ". Stopping Auto-Train. Error: " .. tostring(err or "Object not found"))
+                autoTrainEnabled = false -- Para a automação se o objeto não for encontrado
+                AutoTrainButton.Text = "Auto-Train: OFF"
+                AutoTrainButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100) -- Cinza
+                break -- Sai do loop while
+            end
+
+            pcall(function()
+                WorkoutRepEvent:FireServer(equipmentObject)
             end)
             task.wait(1) -- Intervalo entre as "repetições"
         end
@@ -231,40 +238,37 @@ AutoTrainButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Função para arrastar a GUI (agora conectada ao TitleBar)
-local dragging
-local dragInput
-local dragStart
-local startPosition
+-- Função para arrastar a GUI (agora usando UserInputService para maior robustez)
+local dragging = false
+local dragStart = Vector2.new(0,0)
+local startPosition = UDim2.new(0,0,0,0)
 
-local function onMouseMoved(input)
-    local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
-end
-
-local function onMouseUp(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-        dragInput = nil
-        -- Desconecta o evento MouseMoved
-        if TitleBar.MouseMoved:find(onMouseMoved) then
-            TitleBar.MouseMoved:Disconnect()
-        end
-    end
-end
-
-local function onMouseDown(input)
+TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
-        dragInput = input
         dragStart = input.Position
         startPosition = MainFrame.Position
-        -- Conecta o evento MouseMoved
-        TitleBar.MouseMoved:Connect(onMouseMoved)
-    end
-end
 
-TitleBar.InputBegan:Connect(onMouseDown)
-TitleBar.InputEnded:Connect(onMouseUp)
+        local connection
+        connection = UserInputService.InputChanged:Connect(function(inputChanged)
+            if inputChanged.UserInputType == Enum.UserInputType.MouseMovement then
+                if dragging then
+                    local delta = inputChanged.Position - dragStart
+                    MainFrame.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+                end
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(inputEnded)
+            if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+                if connection then
+                    connection:Disconnect()
+                    connection = nil
+                end
+            end
+        end)
+    end
+end)
 
 print("Automation GUI Loaded!")
