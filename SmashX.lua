@@ -1,6 +1,6 @@
 --[[
-    SmashX UI v2 - Script Local Luau
-    Funcionalidades: Drag System (Main & Toggle), Minimizar/Fechar, Toggle Button (ID 11517872858), 
+    SmashX UI v3 - Script Local Luau
+    Funcionalidades: Drag System (Main & Toggle), Minimizar/Fechar, Toggle Button Estilo Delta (ID 11517872858), 
     Setagem de Dinheiro Customizada, Pet de Robux, Auto Treino.
 ]]
 
@@ -26,6 +26,7 @@ local COLORS = {
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SmashX_UI"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Main Frame
@@ -36,6 +37,7 @@ MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = COLORS.Background
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = true
+MainFrame.ZIndex = 2
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -213,17 +215,18 @@ createButton("Parar Auto Treino", function()
     ReplicatedStorage:WaitForChild("TrainingRemotes"):WaitForChild("EndTraining"):FireServer()
 end)
 
--- Botão Flutuante (Toggle Button)
+-- Botão Flutuante (Toggle Button) - Estilo Delta
 local ToggleButton = Instance.new("ImageButton")
-ToggleButton.Name = "ToggleButton"
-ToggleButton.Size = UDim2.new(0, 50, 0, 50)
-ToggleButton.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleButton.Name = "SmashX_Toggle"
+ToggleButton.Size = UDim2.new(0, 60, 0, 60) -- Tamanho ideal para mobile
+ToggleButton.Position = UDim2.new(0, 10, 0.5, -30)
 ToggleButton.BackgroundColor3 = COLORS.Background
 ToggleButton.Image = "rbxassetid://11517872858"
+ToggleButton.ZIndex = 10 -- Garantir que fique por cima de tudo
 ToggleButton.Parent = ScreenGui
 
 local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 10)
+ToggleCorner.CornerRadius = UDim.new(1, 0) -- Totalmente circular
 ToggleCorner.Parent = ToggleButton
 
 local ToggleStroke = Instance.new("UIStroke")
@@ -231,7 +234,7 @@ ToggleStroke.Color = COLORS.Accent
 ToggleStroke.Thickness = 2
 ToggleStroke.Parent = ToggleButton
 
--- Função de Drag Genérica
+-- Função de Drag Genérica (Melhorada para Mobile)
 local function makeDraggable(frame, dragArea)
     local dragging, dragInput, dragStart, startPos
     dragArea = dragArea or frame
@@ -272,7 +275,7 @@ end
 makeDraggable(MainFrame, TopBar)
 makeDraggable(ToggleButton)
 
--- Funcionalidade de Ocultar/Mostrar
+-- Funcionalidade de Ocultar/Mostrar (Com clique simples)
 ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = not MainFrame.Visible
 end)
@@ -298,4 +301,4 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-print("SmashX UI v2 Carregada com Sucesso!")
+print("SmashX UI v3 Carregada com Sucesso!")
