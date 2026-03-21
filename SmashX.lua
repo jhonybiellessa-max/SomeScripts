@@ -1,6 +1,7 @@
 --[[
-    SmashX UI - Script Local Luau
-    Funcionalidades: Drag System, Minimizar/Fechar, Setagem de Dinheiro Customizada, Pet de Robux, Auto Treino.
+    SmashX UI v2 - Script Local Luau
+    Funcionalidades: Drag System (Main & Toggle), Minimizar/Fechar, Toggle Button (ID 11517872858), 
+    Setagem de Dinheiro Customizada, Pet de Robux, Auto Treino.
 ]]
 
 local Players = game:GetService("Players")
@@ -34,6 +35,7 @@ MainFrame.Size = UDim2.new(0, 400, 0, 300)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
 MainFrame.BackgroundColor3 = COLORS.Background
 MainFrame.BorderSizePixel = 0
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner")
@@ -211,38 +213,68 @@ createButton("Parar Auto Treino", function()
     ReplicatedStorage:WaitForChild("TrainingRemotes"):WaitForChild("EndTraining"):FireServer()
 end)
 
--- Drag System
-local dragging, dragInput, dragStart, startPos
+-- Botão Flutuante (Toggle Button)
+local ToggleButton = Instance.new("ImageButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleButton.BackgroundColor3 = COLORS.Background
+ToggleButton.Image = "rbxassetid://11517872858"
+ToggleButton.Parent = ScreenGui
 
-local function update(input)
-    local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 10)
+ToggleCorner.Parent = ToggleButton
+
+local ToggleStroke = Instance.new("UIStroke")
+ToggleStroke.Color = COLORS.Accent
+ToggleStroke.Thickness = 2
+ToggleStroke.Parent = ToggleButton
+
+-- Função de Drag Genérica
+local function makeDraggable(frame, dragArea)
+    local dragging, dragInput, dragStart, startPos
+    dragArea = dragArea or frame
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    dragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    dragArea.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
 end
 
-TopBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
+-- Aplicar Drag na MainFrame e no ToggleButton
+makeDraggable(MainFrame, TopBar)
+makeDraggable(ToggleButton)
 
-TopBar.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        update(input)
-    end
+-- Funcionalidade de Ocultar/Mostrar
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
 end)
 
 -- Minimizar/Maximizar
@@ -266,4 +298,4 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-print("SmashX UI Carregada com Sucesso!")
+print("SmashX UI v2 Carregada com Sucesso!")
