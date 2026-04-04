@@ -71,7 +71,6 @@ local function buildTree(instance)
             Transparency = instance.Transparency,
 
             -- Propriedades de Interação
-            AutoButtonColor = instance.AutoButtonColor,
             Modal = instance.Modal,
             ResizesContents = instance.ResizesContents,
             SizeConstraint = instance.SizeConstraint,
@@ -102,6 +101,11 @@ local function buildTree(instance)
             props.SliceCenter = instance.SliceCenter
             props.SliceScale = instance.SliceScale
             props.TileSize = instance.TileSize
+        end
+
+        -- Propriedade específica de botões
+        if instance:IsA("TextButton") or instance:IsA("ImageButton") then
+            props.AutoButtonColor = instance.AutoButtonColor
         end
 
         -- Formata e adiciona propriedades ao nó
