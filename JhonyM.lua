@@ -9,7 +9,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TextChatService = game:GetService("TextChatService")
 
-local MAX_MESSAGE_LENGTH = 200 -- Limite de caracteres para mensagens no chat do Roblox
+local MAX_MESSAGE_LENGTH = 150 -- Limite de caracteres para mensagens no chat do Roblox
 
 -- Função auxiliar para enviar mensagens ao chat (compatível com TextChatService e sistema legado)
 local function sendMessageToChat(message)
