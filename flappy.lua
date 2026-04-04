@@ -1,6 +1,5 @@
 --[[ 
-    Roblox GUI Explorer Sender → Envia estrutura em árvore para seu servidor
-    Versão Melhorada
+    Roblox GUI Explorer Sender → Versão FINAL (Estável e sem erros)
 ]]
 
 -- ============================================================================
@@ -15,7 +14,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 
 -- ============================================================================
--- VARIÁVEIS GLOBAIS
+-- VARIÁVEIS
 -- ============================================================================
 local LocalPlayer = Players.LocalPlayer
 
@@ -23,22 +22,33 @@ local LocalPlayer = Players.LocalPlayer
 -- FUNÇÕES AUXILIARES
 -- ============================================================================
 
---- Retorna um valor de propriedade formatado para envio.
+-- 🔥 Pega propriedade sem quebrar o script
+local function safeGet(instance, property)
+    local success, value = pcall(function()
+        return instance[property]
+    end)
+    return success and value or nil
+end
+
+-- 🔥 Formata valores
 local function formatPropertyValue(value)
-    if typeof(value) == "Vector2" or typeof(value) == "Vector3" or typeof(value) == "UDim2" or typeof(value) == "Color3" then
+    if value == nil then return nil end
+
+    local t = typeof(value)
+
+    if t == "Vector2" or t == "Vector3" or t == "UDim2" or t == "Color3" then
         return tostring(value)
-    elseif typeof(value) == "boolean" or typeof(value) == "number" or typeof(value) == "string" then
+    elseif t == "boolean" or t == "number" or t == "string" then
         return value
     else
-        -- Para outros tipos complexos, pode-se decidir como serializar ou ignorar.
-        -- Por enquanto, retorna tostring para ter alguma representação.
         return tostring(value)
     end
 end
 
---- Constrói uma árvore hierárquica de instâncias da GUI.
---- @param instance Instance O objeto Instance a ser processado.
---- @return table Uma tabela representando o nó da árvore.
+-- ============================================================================
+-- CONSTRUTOR DA ÁRVORE
+-- ============================================================================
+
 local function buildTree(instance)
     local node = {
         name = instance.Name,
@@ -47,76 +57,66 @@ local function buildTree(instance)
         children = {}
     }
 
-    -- Coleta de propriedades relevantes para GuiObjects
     if instance:IsA("GuiObject") then
-        local props = {
-            -- Propriedades de Layout
-            Visible = instance.Visible,
-            Active = instance.Active,
-            Size = instance.Size,
-            Position = instance.Position,
-            AnchorPoint = instance.AnchorPoint,
-            ZIndex = instance.ZIndex,
-            ClipsDescendants = instance.ClipsDescendants,
-            LayoutOrder = instance.LayoutOrder,
+        local props = {}
 
-            -- Propriedades de Aparência
-            BackgroundColor3 = instance.BackgroundColor3,
-            BackgroundTransparency = instance.BackgroundTransparency,
-            BorderColor3 = instance.BorderColor3,
-            BorderMode = instance.BorderMode,
-            BorderSizePixel = instance.BorderSizePixel,
-            Draggable = instance.Draggable,
-            Selectable = instance.Selectable,
-            Transparency = instance.Transparency,
+        -- 🔥 Propriedades seguras (NUNCA quebra)
+        props.Visible = safeGet(instance, "Visible")
+        props.Active = safeGet(instance, "Active")
+        props.Size = safeGet(instance, "Size")
+        props.Position = safeGet(instance, "Position")
+        props.AnchorPoint = safeGet(instance, "AnchorPoint")
+        props.ZIndex = safeGet(instance, "ZIndex")
+        props.LayoutOrder = safeGet(instance, "LayoutOrder")
 
-            -- Propriedades de Interação
-            Modal = instance.Modal,
-            ResizesContents = instance.ResizesContents,
-            SizeConstraint = instance.SizeConstraint,
-            AutomaticSize = instance.AutomaticSize,
-        }
+        props.BackgroundColor3 = safeGet(instance, "BackgroundColor3")
+        props.BackgroundTransparency = safeGet(instance, "BackgroundTransparency")
+        props.BorderColor3 = safeGet(instance, "BorderColor3")
+        props.BorderSizePixel = safeGet(instance, "BorderSizePixel")
 
-        -- Propriedades específicas de texto
-        if instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
-            props.Text = instance.Text
-            props.Font = instance.Font.Name
-            props.TextSize = instance.TextSize
-            props.TextColor3 = instance.TextColor3
-            props.TextTransparency = instance.TextTransparency
-            props.TextStrokeColor3 = instance.TextStrokeColor3
-            props.TextStrokeTransparency = instance.TextStrokeTransparency
-            props.TextScaled = instance.TextScaled
-            props.TextWrapped = instance.TextWrapped
-            props.TextXAlignment = instance.TextXAlignment.Name
-            props.TextYAlignment = instance.TextYAlignment.Name
-        end
+        props.SizeConstraint = safeGet(instance, "SizeConstraint")
+        props.AutomaticSize = safeGet(instance, "AutomaticSize")
 
-        -- Propriedades específicas de imagem
-        if instance:IsA("ImageLabel") or instance:IsA("ImageButton") then
-            props.Image = instance.Image
-            props.ImageColor3 = instance.ImageColor3
-            props.ImageTransparency = instance.ImageTransparency
-            props.ScaleType = instance.ScaleType.Name
-            props.SliceCenter = instance.SliceCenter
-            props.SliceScale = instance.SliceScale
-            props.TileSize = instance.TileSize
-        end
-
-        -- Propriedade específica de botões
+        -- 🔥 BOTÕES (evita erro)
         if instance:IsA("TextButton") or instance:IsA("ImageButton") then
-            props.AutoButtonColor = instance.AutoButtonColor
+            props.AutoButtonColor = safeGet(instance, "AutoButtonColor")
+            props.Modal = safeGet(instance, "Modal")
         end
 
-        -- Formata e adiciona propriedades ao nó
+        -- 🔥 SCROLL
+        if instance:IsA("ScrollingFrame") then
+            props.CanvasSize = safeGet(instance, "CanvasSize")
+            props.ScrollBarThickness = safeGet(instance, "ScrollBarThickness")
+        end
+
+        -- 🔥 TEXTO
+        if instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
+            props.Text = safeGet(instance, "Text")
+            props.TextSize = safeGet(instance, "TextSize")
+            props.TextColor3 = safeGet(instance, "TextColor3")
+            props.TextTransparency = safeGet(instance, "TextTransparency")
+            props.TextScaled = safeGet(instance, "TextScaled")
+            props.TextWrapped = safeGet(instance, "TextWrapped")
+        end
+
+        -- 🔥 IMAGEM
+        if instance:IsA("ImageLabel") or instance:IsA("ImageButton") then
+            props.Image = safeGet(instance, "Image")
+            props.ImageColor3 = safeGet(instance, "ImageColor3")
+            props.ImageTransparency = safeGet(instance, "ImageTransparency")
+        end
+
+        -- 🔥 Formata tudo
         for key, value in pairs(props) do
-            node.properties[key] = formatPropertyValue(value)
+            local formatted = formatPropertyValue(value)
+            if formatted ~= nil then
+                node.properties[key] = formatted
+            end
         end
     end
 
-    -- Processa filhos recursivamente
+    -- 🔁 Filhos
     for _, child in ipairs(instance:GetChildren()) do
-        -- Filtra apenas ScreenGuis e GuiObjects para a árvore
         if child:IsA("ScreenGui") or child:IsA("GuiObject") then
             table.insert(node.children, buildTree(child))
         end
@@ -125,55 +125,60 @@ local function buildTree(instance)
     return node
 end
 
---- Envia os dados da árvore para a API.
---- @param treeData table A tabela de dados da árvore a ser enviada.
+-- ============================================================================
+-- ENVIO PARA API
+-- ============================================================================
+
 local function sendToAPI(treeData)
-    local jsonPayload
-    local success, err = pcall(function()
-        jsonPayload = HttpService:JSONEncode({ content = treeData })
+    local success, response = pcall(function()
+        local data = HttpService:JSONEncode({
+            content = HttpService:JSONEncode(treeData)
+        })
+
+        local requestFunction = (syn and syn.request) 
+            or (http and http.request) 
+            or request
+
+        if not requestFunction then
+            error("Executor não suporta request")
+        end
+
+        return requestFunction({
+            Url = API_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["ngrok-skip-browser-warning"] = "true"
+            },
+            Body = data
+        })
     end)
 
-    if not success then
-        warn("Erro ao codificar JSON: " .. tostring(err))
-        return
-    end
-
-    local headers = {
-        ["Content-Type"] = "application/json",
-        ["ngrok-skip-browser-warning"] = "true" -- Necessário para ngrok
-    }
-
-    local responseSuccess, responseResult = pcall(function()
-        return HttpService:PostAsync(API_URL, jsonPayload, Enum.HttpContentType.ApplicationJson, false, headers)
-    end)
-
-    if responseSuccess then
-        print("Árvore enviada para o servidor com sucesso!")
-        -- Opcional: print(responseResult) para ver a resposta do servidor
+    if success then
+        print("Árvore enviada com sucesso!")
     else
-        warn("Erro ao enviar para a API: " .. tostring(responseResult))
+        warn("Erro ao enviar: " .. tostring(response))
     end
 end
 
 -- ============================================================================
--- INÍCIO DA EXECUÇÃO
+-- EXECUÇÃO
 -- ============================================================================
+
 if LocalPlayer then
     print("Iniciando varredura da PlayerGui de " .. LocalPlayer.Name .. "...")
 
     local tree = {}
 
-    -- Itera sobre as ScreenGuis do jogador
     for _, screenGui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
         if screenGui:IsA("ScreenGui") then
             table.insert(tree, buildTree(screenGui))
         end
     end
 
-    -- Envia a árvore construída para a API
     sendToAPI(tree)
 
     print("Varredura concluída. Verifique seu site.")
 else
-    warn("Jogador local não encontrado. Certifique-se de que o script está sendo executado no cliente.")
+    warn("Jogador local não encontrado.")
 end
