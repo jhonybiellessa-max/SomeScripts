@@ -58,7 +58,7 @@ local function processMessage(text)
     local lowerText = text:lower()
 
     -- Verifica se a mensagem começa com "jhony"
-    if string.sub(lowerText, 1, 5) == "jhonym" then
+    if string.sub(lowerText, 1, 5) == "jhony" then
         -- Extrai a pergunta (pula "jhony" e o espaço/caractere seguinte)
         local pergunta = string.sub(text, 7)
         
