@@ -1,10 +1,11 @@
 --[[ 
-    Roblox GUI Lister com Webhook para Delta Executor
+    Roblox GUI Lister com Webhook para Delta Executor (Versão Corrigida)
     Este script irá percorrer todos os elementos da PlayerGui (ScreenGui, Frame, TextButton, ImageButton, etc.)
     e enviar a estrutura hierárquica e os detalhes para um Webhook do Discord.
 
-    Isso é útil para identificar os nomes exatos e as propriedades de elementos da interface
-    que podem ser usados em scripts de automação ou para depuração.
+    **Correção para o erro "vulnerable function"**: 
+    A função `HttpService:PostAsync` foi substituída pela função `request` (ou `http_request`)
+    que é a forma segura e permitida pelos executores como o Delta para fazer requisições HTTP externas.
 
     Instruções:
     1. Copie o conteúdo deste script.
@@ -19,7 +20,7 @@ local WEBHOOK_URL = "https://discord.com/api/webhooks/1488371810964733972/0vxZMU
 
 -- SERVIÇOS DO ROBLOX
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
+local HttpService = game:GetService("HttpService") -- Ainda usado para JSONEncode
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -62,21 +63,33 @@ local function collectInstanceInfo(instance, indentLevel)
     return info
 end
 
--- Função para enviar dados para o Webhook do Discord
+-- Função para enviar dados para o Webhook do Discord usando 'request'
 local function sendToWebhook(messageContent)
+    local payload = HttpService:JSONEncode({
+        content = "```lua\n" .. messageContent .. "\n```", -- Formata como bloco de código Lua
+        username = "Roblox GUI Lister Bot",
+        avatar_url = "https://www.roblox.com/favicon.ico"
+    })
+
     local success, response = pcall(function()
-        local data = HttpService:JSONEncode({
-            content = "```lua\n" .. messageContent .. "\n```", -- Formata como bloco de código Lua
-            username = "Roblox GUI Lister Bot",
-            avatar_url = "https://www.roblox.com/favicon.ico" -- Ícone do Roblox
+        -- Usa a função 'request' que é geralmente permitida em executores
+        -- Nota: A sintaxe exata pode variar entre executores (ex: 'http_request' em vez de 'request')
+        -- Se 'request' não funcionar, tente 'http_request'
+        return request({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = payload
         })
-        return HttpService:PostAsync(WEBHOOK_URL, data)
     end)
 
     if success then
-        print("Dados enviados para o Webhook com sucesso!")
+        print("Dados enviados para o Webhook com sucesso! Resposta: " .. tostring(response.StatusCode or response))
     else
-        warn("Erro ao enviar dados para o Webhook: " .. response)
+        warn("Erro ao enviar dados para o Webhook: " .. tostring(response))
+        warn("Tente verificar se a função 'request' ou 'http_request' é suportada pelo seu executor.")
     end
 end
 
