@@ -1,5 +1,5 @@
 --[[ 
-    Roblox GUI Lister → Enviando para seu servidor local (FastAPI)
+    Roblox GUI Explorer Sender → Envia estrutura em árvore para seu servidor
 ]]
 
 local API_URL = "https://snortingly-unbevelled-pearl.ngrok-free.dev/upload"
@@ -10,48 +10,52 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Função para coletar informações
-local function collectInstanceInfo(instance, indentLevel)
-    local info = {}
-    local indent = string.rep("  ", indentLevel)
+-- 🔥 Função para construir árvore da GUI
+local function buildTree(instance)
+    local node = {
+        name = instance.Name,
+        class = instance.ClassName,
+        properties = {},
+        children = {}
+    }
 
-    table.insert(info, indent .. "- Name: " .. instance.Name)
-    table.insert(info, indent .. "  Class: " .. instance.ClassName)
-    table.insert(info, indent .. "  Parent: " .. (instance.Parent and instance.Parent.Name or "nil"))
-
+    -- Propriedades gerais
     if instance:IsA("GuiObject") then
-        table.insert(info, indent .. "  AbsolutePosition: " .. tostring(instance.AbsolutePosition))
-        table.insert(info, indent .. "  AbsoluteSize: " .. tostring(instance.AbsoluteSize))
-        table.insert(info, indent .. "  Visible: " .. tostring(instance.Visible))
-        table.insert(info, indent .. "  ZIndex: " .. tostring(instance.ZIndex))
+        node.properties = {
+            Visible = instance.Visible,
+            Size = tostring(instance.Size),
+            Position = tostring(instance.Position),
+            AbsoluteSize = tostring(instance.AbsoluteSize),
+            AbsolutePosition = tostring(instance.AbsolutePosition),
+            ZIndex = instance.ZIndex
+        }
 
         if instance:IsA("TextLabel") or instance:IsA("TextButton") then
-            table.insert(info, indent .. "  Text: \"" .. instance.Text .. "\"")
-            table.insert(info, indent .. "  TextColor3: " .. tostring(instance.TextColor3))
-            table.insert(info, indent .. "  TextSize: " .. tostring(instance.TextSize))
+            node.properties.Text = instance.Text
+            node.properties.TextSize = instance.TextSize
+            node.properties.TextColor3 = tostring(instance.TextColor3)
         end
 
         if instance:IsA("ImageLabel") or instance:IsA("ImageButton") then
-            table.insert(info, indent .. "  Image: " .. instance.Image)
+            node.properties.Image = instance.Image
         end
     end
 
+    -- 🔁 Filhos (recursivo)
     for _, child in ipairs(instance:GetChildren()) do
         if child:IsA("ScreenGui") or child:IsA("GuiObject") then
-            for _, line in ipairs(collectInstanceInfo(child, indentLevel + 1)) do
-                table.insert(info, line)
-            end
+            table.insert(node.children, buildTree(child))
         end
     end
 
-    return info
+    return node
 end
 
--- Função de envio para seu site
-local function sendToAPI(messageContent)
+-- 📤 Função de envio
+local function sendToAPI(treeData)
     local success, response = pcall(function()
         local data = HttpService:JSONEncode({
-            content = messageContent
+            content = treeData
         })
 
         local requestFunction = (syn and syn.request) 
@@ -74,31 +78,27 @@ local function sendToAPI(messageContent)
     end)
 
     if success then
-        print("Dados enviados para o seu servidor!")
+        print("Árvore enviada para o servidor com sucesso!")
     else
         warn("Erro ao enviar: " .. tostring(response))
     end
 end
 
--- INÍCIO
+-- 🚀 INÍCIO
 if LocalPlayer then
     print("Iniciando varredura da PlayerGui de " .. LocalPlayer.Name .. "...")
 
-    local guiInfo = {}
-    table.insert(guiInfo, "=== PLAYERGUI de " .. LocalPlayer.Name .. " ===")
+    local tree = {}
 
     for _, screenGui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
         if screenGui:IsA("ScreenGui") then
-            for _, line in ipairs(collectInstanceInfo(screenGui, 0)) do
-                table.insert(guiInfo, line)
-            end
+            table.insert(tree, buildTree(screenGui))
         end
     end
 
-    local formattedInfo = table.concat(guiInfo, "\n")
-
-    -- Envia tudo de uma vez
-    sendToAPI(formattedInfo)
+    -- Converte para JSON e envia
+    local encodedTree = HttpService:JSONEncode(tree)
+    sendToAPI(encodedTree)
 
 else
     warn("Jogador local não encontrado.")
