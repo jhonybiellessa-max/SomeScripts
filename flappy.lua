@@ -2,7 +2,7 @@
     Roblox GUI Lister → Enviando para seu servidor local (FastAPI)
 ]]
 
-local API_URL = ""http://192.168.1.212:8000/upload""
+local API_URL = "https://snortingly-unbevelled-pearl.ngrok-free.dev/upload"
 
 -- SERVIÇOS
 local Players = game:GetService("Players")
@@ -66,7 +66,8 @@ local function sendToAPI(messageContent)
             Url = API_URL,
             Method = "POST",
             Headers = {
-                ["Content-Type"] = "application/json"
+                ["Content-Type"] = "application/json",
+                ["ngrok-skip-browser-warning"] = "true"
             },
             Body = data
         })
