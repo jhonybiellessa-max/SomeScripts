@@ -1,11 +1,8 @@
 --[[ 
-    Roblox GUI Lister com Webhook (VERSÃO CORRIGIDA PARA EXECUTOR)
-
-    Agora usa request/http.request/syn.request ao invés de HttpService:PostAsync
-    para evitar o erro: "vulnerable function"
+    Roblox GUI Lister → Enviando para seu servidor local (FastAPI)
 ]]
 
-local WEBHOOK_URL = "https://discord.com/api/webhooks/1488371810964733972/0vxZMUetBEMnIYUMU0TZu72i2lrQ_ai4ltvarV119HZSdPirp5d1MFg3z1SlgmIqfinm"
+local API_URL = "http://127.0.0.1:8000/upload"
 
 -- SERVIÇOS
 local Players = game:GetService("Players")
@@ -50,16 +47,13 @@ local function collectInstanceInfo(instance, indentLevel)
     return info
 end
 
--- Função de envio CORRIGIDA
-local function sendToWebhook(messageContent)
+-- Função de envio para seu site
+local function sendToAPI(messageContent)
     local success, response = pcall(function()
         local data = HttpService:JSONEncode({
-            content = "```lua\n" .. messageContent .. "\n```",
-            username = "Roblox GUI Lister Bot",
-            avatar_url = "https://www.roblox.com/favicon.ico"
+            content = messageContent
         })
 
-        -- Detecta automaticamente a função disponível no executor
         local requestFunction = (syn and syn.request) 
             or (http and http.request) 
             or request
@@ -69,7 +63,7 @@ local function sendToWebhook(messageContent)
         end
 
         return requestFunction({
-            Url = WEBHOOK_URL,
+            Url = API_URL,
             Method = "POST",
             Headers = {
                 ["Content-Type"] = "application/json"
@@ -79,9 +73,9 @@ local function sendToWebhook(messageContent)
     end)
 
     if success then
-        print("Dados enviados para o Webhook com sucesso!")
+        print("Dados enviados para o seu servidor!")
     else
-        warn("Erro ao enviar dados para o Webhook: " .. tostring(response))
+        warn("Erro ao enviar: " .. tostring(response))
     end
 end
 
@@ -102,15 +96,11 @@ if LocalPlayer then
 
     local formattedInfo = table.concat(guiInfo, "\n")
 
-    -- ⚠️ Discord tem limite de 2000 caracteres, então vamos dividir
-    local chunkSize = 1900
-    for i = 1, #formattedInfo, chunkSize do
-        local chunk = string.sub(formattedInfo, i, i + chunkSize - 1)
-        sendToWebhook(chunk)
-        task.wait(1) -- evita rate limit
-    end
+    -- Envia tudo de uma vez
+    sendToAPI(formattedInfo)
+
 else
     warn("Jogador local não encontrado.")
 end
 
-print("Varredura de GUI concluída. Verifique o Discord.")
+print("Varredura concluída. Verifique seu site.")
