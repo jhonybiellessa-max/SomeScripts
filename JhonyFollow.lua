@@ -9,7 +9,7 @@ local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 local targetPlayer = nil
 local isFollowing = false
 
--- Função para enviar mensagem
+-- Função de mensagem
 local function sendMessageToChat(msg)
     print(msg)
 end
@@ -17,18 +17,40 @@ end
 -- Atualizar personagem ao respawn
 localPlayer.CharacterAdded:Connect(function(char)
     character = char
-    humanoid = character:WaitForChild("Humanoid")
-    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    humanoid = char:WaitForChild("Humanoid")
+    humanoidRootPart = char:WaitForChild("HumanoidRootPart")
 end)
 
--- Encontrar player ignorando maiúsculas/minúsculas
-local function findPlayerByName(name)
+-- Encontrar player por Name OU DisplayName
+local function findPlayer(name)
     for _, player in pairs(Players:GetPlayers()) do
-        if player.Name:lower() == name:lower() then
+        if player.Name:lower() == name:lower() 
+        or player.DisplayName:lower() == name:lower() then
             return player
         end
     end
     return nil
+end
+
+-- Encontrar player mais próximo
+local function getClosestPlayer()
+    local closest = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and humanoidRootPart then
+                local distance = (humanoidRootPart.Position - hrp.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closest = player
+                end
+            end
+        end
+    end
+
+    return closest
 end
 
 -- Processar comandos
@@ -38,18 +60,32 @@ local function processChatCommand(message)
     -- FOLLOW
     if lowerMessage:sub(1, 7) == "!follow" then
         local targetName = message:sub(8):gsub("^%s*", "")
-        local playerToFollow = findPlayerByName(targetName)
+
+        -- Se vier ##### ou vazio → pega o mais próximo
+        if targetName == "" or targetName:find("#") then
+            local closest = getClosestPlayer()
+            if closest then
+                targetPlayer = closest
+                isFollowing = true
+                sendMessageToChat("JhonyFollow: Seguindo o jogador mais próximo: " .. closest.Name)
+            else
+                sendMessageToChat("JhonyFollow: Nenhum jogador próximo encontrado.")
+            end
+            return
+        end
+
+        local playerToFollow = findPlayer(targetName)
 
         if playerToFollow then
             if playerToFollow ~= localPlayer then
                 targetPlayer = playerToFollow
                 isFollowing = true
-                sendMessageToChat("JhonyFollow: Agora estou seguindo " .. targetPlayer.Name .. ".")
+                sendMessageToChat("JhonyFollow: Agora estou seguindo " .. playerToFollow.Name)
             else
                 sendMessageToChat("JhonyFollow: Não posso seguir a mim mesmo!")
             end
         else
-            sendMessageToChat("JhonyFollow: Jogador '" .. targetName .. "' não encontrado.")
+            sendMessageToChat("JhonyFollow: Jogador não encontrado.")
         end
 
     -- UNFOLLOW
@@ -64,36 +100,33 @@ local function processChatCommand(message)
     end
 end
 
--- Conectar chat
+-- Chat
 if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
     TextChatService.MessageReceived:Connect(function(msg)
         if msg.TextSource and msg.TextSource.UserId == localPlayer.UserId then
             processChatCommand(msg.Text)
         end
     end)
-    print("JhonyFollow: Usando TextChatService")
 else
     localPlayer.Chatted:Connect(function(msg)
         processChatCommand(msg)
     end)
-    print("JhonyFollow: Usando chat legado")
 end
 
--- LOOP DE FOLLOW
+-- LOOP FOLLOW
 task.spawn(function()
     while true do
         task.wait(0.2)
 
         if isFollowing and targetPlayer then
-            local targetCharacter = targetPlayer.Character
+            local targetChar = targetPlayer.Character
 
-            if targetCharacter and humanoid and humanoidRootPart then
-                local targetHRP = targetCharacter:FindFirstChild("HumanoidRootPart")
+            if targetChar and humanoid and humanoidRootPart then
+                local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
 
                 if targetHRP then
                     local distance = (humanoidRootPart.Position - targetHRP.Position).Magnitude
 
-                    -- Só se move se estiver longe
                     if distance > 5 then
                         humanoid:MoveTo(targetHRP.Position)
                     end
@@ -103,4 +136,4 @@ task.spawn(function()
     end
 end)
 
-print("JhonyFollow: Script carregado com sucesso!")
+print("JhonyFollow: Script pronto!")
