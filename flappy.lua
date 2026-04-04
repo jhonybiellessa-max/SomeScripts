@@ -2,7 +2,7 @@
     Roblox GUI Lister → Enviando para seu servidor local (FastAPI)
 ]]
 
-local API_URL = "http://127.0.0.1:8000/upload"
+local API_URL = ""http://192.168.1.212:8000/upload""
 
 -- SERVIÇOS
 local Players = game:GetService("Players")
